@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Brain MRI — Diagnostic Console</title>
+
+  <style>
+    :root{
+      --bg-1: #0b1220;
+      --bg-2: #071427;
+      --glass: rgba(255,255,255,0.04);
+      --muted: #9aa6b2;
+      --accent-a: #7c3aed; /* purple */
+      --accent-b: #06b6d4; /* cyan */
+      --success: #10b981;
+      --danger: #ef4444;
+      --glass-border: rgba(255,255,255,0.06);
+      --radius: 14px;
+      --shadow: 0 12px 40px rgba(2,6,23,0.66);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    html,body{height:100%;margin:0;background:
+      radial-gradient(800px 400px at 10% 10%, rgba(124,58,237,0.08), transparent 10%),
+      linear-gradient(180deg,var(--bg-1) 0%, var(--bg-2) 100%);
+      color:#e8f0fb; display:flex; align-items:center; justify-content:center; padding:28px;
+    }
+
+    .wrap { width:100%; max-width:1200px; display:grid; grid-template-columns: 1fr 420px; gap:28px; align-items:start; }
+
+    /* HERO / LEFT */
+    .hero {
+      border-radius: var(--radius);
+      padding: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid var(--glass-border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px) saturate(120%);
+    }
+
+    .top {
+      display:flex; align-items:center; gap:16px;
+    }
+    .doc-card {
+      display:flex; gap:12px; align-items:center;
+    }
+    .avatar {
+      width:72px;height:72px;border-radius:14px;background:
+        linear-gradient(135deg,var(--accent-b),var(--accent-a));
+      display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:white;
+      box-shadow: 0 8px 22px rgba(12,12,40,0.6);
+    }
+    .heading {
+      font-size:20px;font-weight:800;margin:0;
+    }
+    .sub { color:var(--muted); margin-top:6px; font-size:13px }
+
+    /* features row */
+    .features { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap }
+    .pill { background: rgba(255,255,255,0.02); border-radius:10px; padding:8px 12px; font-weight:600; font-size:13px; color:#e6eef8; border:1px solid rgba(255,255,255,0.03) }
+
+    /* main upload + preview */
+    .upload-area { margin-top:18px; display:flex; gap:18px; align-items:flex-start; }
+    .preview-box {
+      width:360px; min-height:260px; border-radius:12px; overflow:hidden; position:relative;
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+      border:1px solid rgba(255,255,255,0.03); display:flex;align-items:center;justify-content:center;
+    }
+    .preview-box img { width:100%; height:100%; object-fit:cover; display:block; }
+
+    /* scanning overlay animation */
+    .scan {
+      position:absolute; inset:0; pointer-events:none;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 55%, transparent 100%);
+      transform: translateX(-120%);
+      animation: sweep 1.6s linear infinite;
+      mix-blend-mode: overlay; opacity:0.8;
+    }
+    @keyframes sweep {
+      from { transform: translateX(-120%); }
+      to   { transform: translateX(120%); }
+    }
+
+    /* controls */
+    .controls { display:flex; gap:12px; margin-top:8px; align-items:center }
+    .btn {
+      padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:700;
+      color:white;background:linear-gradient(90deg,var(--accent-a),var(--accent-b));
+      box-shadow:0 10px 30px rgba(6,182,212,0.06);
+      transition: transform .12s ease;
+    }
+    .btn:hover{ transform: translateY(-2px) }
+    .btn.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted) }
+
+    input[type=file]{ display:none }
+
+    /* right column */
+    .side {
+      border-radius:var(--radius); padding:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid var(--glass-border); box-shadow: var(--shadow); backdrop-filter: blur(8px);
+    }
+
+    .panel-title { font-weight:800; margin:0 0 8px 0; }
+    .health { color:var(--muted); font-size:13px; margin-bottom:12px; }
+
+    /* probability meter */
+    .meter { margin-top:10px; border-radius:12px; padding:12px; border:1px solid rgba(255,255,255,0.03); background:rgba(255,255,255,0.01) }
+    .meter .row{ display:flex; align-items:center; gap:12px; }
+    .badge { padding:8px 10px;border-radius:999px;font-weight:800; font-size:14px; color:#06202e; background:linear-gradient(90deg,var(--accent-b),var(--accent-a)); }
+    .progress { height:14px; flex:1; background:rgba(255,255,255,0.03); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,0.02) }
+    .bar { height:100%; width:0%; background: linear-gradient(90deg,var(--accent-b),var(--accent-a)); transition: width 900ms cubic-bezier(.2,.9,.2,1) }
+
+    .prob-num { width:56px; text-align:right; font-weight:700; color:var(--muted) }
+
+    /* confetti */
+    .confetti {
+      position: absolute; inset:0; pointer-events:none; overflow:visible;
+    }
+
+    /* history */
+    .history { margin-top:16px; display:flex; flex-direction:column; gap:10px; max-height:380px; overflow:auto; padding-right:4px }
+    .h-item { display:flex; gap:10px; align-items:center; padding:10px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border:1px solid rgba(255,255,255,0.02); cursor:pointer; }
+    .h-thumb { width:56px;height:56px;border-radius:8px; overflow:hidden; flex-shrink:0 }
+    .h-thumb img{ width:100%; height:100%; object-fit:cover }
+    .h-info { min-width:0 }
+    .h-label { font-weight:700 }
+    .h-sub { color:var(--muted); font-size:13px }
+
+    /* micro interactions */
+    .pulse {
+      animation: pulse 1.6s infinite;
+    }
+    @keyframes pulse { 0%{ transform:scale(1); } 50%{ transform:scale(1.02); } 100%{ transform:scale(1); } }
+
+    /* footer small */
+    .footer { margin-top:14px; color:var(--muted); font-size:13px; text-align:center }
+
+    @media (max-width:980px){
+      .wrap { grid-template-columns: 1fr; gap:16px }
+      .preview-box { width:100%; min-height:260px }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" role="application" aria-label="MRI prediction console">
+
+    <!-- LEFT: hero + upload -->
+    <div class="hero" aria-live="polite">
+      <div class="top">
+        <div class="doc-card">
+          <div class="avatar">Dr</div>
+          <div>
+            <div class="heading">Diagnostic Console</div>
+            <div class="sub">Local MRI classifier · Private · Fast inference</div>
+          </div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center">
+          <div class="pill">Model: <strong style="margin-left:6px;color:#fff">Local CNN</strong></div>
+          <div class="pill">Version: <strong style="margin-left:6px;color:#fff">1.0</strong></div>
+        </div>
+      </div>
+
+      <div class="features" aria-hidden="true">
+        <div class="pill">Realtime</div>
+        <div class="pill">Confidential</div>
+        <div class="pill">Non-Commercial</div>
+        <div class="pill">Batch-ready</div>
+      </div>
+
+      <div class="upload-area">
+        <div class="preview-box" id="previewBox" aria-live="polite">
+          <div style="text-align:center;color:var(--muted);padding:12px" id="emptyText">No image selected</div>
+          <div class="scan" id="scanOverlay" style="display:none"></div>
+          <div class="confetti" id="confetti" aria-hidden="true"></div>
+        </div>
+
+        <div style="flex:1; min-width:0">
+          <div style="display:flex; gap:10px; align-items:center">
+            <label class="btn" for="fileInput" id="choose">Choose image</label>
+            <input id="fileInput" type="file" accept="image/*" />
+            <button class="btn" id="predict">Predict</button>
+            <button class="btn ghost" id="clear">Clear</button>
+          </div>
+
+          <div style="margin-top:12px; color:var(--muted); font-size:13px">
+            <strong id="fileName">No file</strong>
+            <div style="margin-top:6px">Tip: Use a clear axial MRI slice. Remove borders, labels, or overlays for best results.</div>
+          </div>
+
+          <div class="meter" id="resultCard" style="display:none">
+            <div class="row" style="display:flex;align-items:center;gap:12px">
+              <div class="badge" id="resultBadge">—</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="font-weight:800" id="resultLabel">Prediction</div>
+                  <div style="color:var(--muted);font-size:13px" id="resultSmall">model confidence</div>
+                </div>
+                <div style="margin-top:10px" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                  <div class="bar" id="probBar"></div>
+                </div>
+              </div>
+              <div class="prob-num" id="probNum">0%</div>
+            </div>
+            <div style="margin-top:10px;color:var(--muted);font-size:13px" id="resultExplain">—</div>
+          </div>
+
+          <div style="margin-top:14px">
+            <strong>Last raw response</strong>
+            <pre id="raw" style="background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;margin-top:8px;color:var(--muted);min-height:80px">No requests yet.</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">Local inference — images stay on your machine</div>
+    </div>
+
+    <!-- RIGHT: side panel -->
+    <aside class="side" aria-label="Side panel">
+      <div class="side panel" style="padding:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="panel-title">System Status</div>
+            <div class="health" id="healthText">Model: <span style="font-weight:800">Loading...</span></div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:800;color:var(--muted);font-size:13px">Session</div>
+            <div style="color:var(--muted);font-size:13px" id="sessionCount">0 predictions</div>
+          </div>
+        </div>
+
+        <div class="meter" style="margin-top:14px;">
+          <div style="font-weight:800">Recent Confidence</div>
+          <div id="miniHistory" style="display:flex;gap:8px;margin-top:10px;align-items:center"></div>
+        </div>
+
+        <div style="margin-top:16px">
+          <div style="font-weight:800">Prediction History</div>
+          <div class="history" id="history"></div>
+        </div>
+      </div>
+
+      <div class="side panel" style="padding:16px;">
+        <div style="font-weight:800;margin-bottom:8px">Diagnostic Ingredients</div>
+        <ul style="color:var(--muted);line-height:1.6;margin:0;padding-left:18px">
+          <li><strong>Preprocessing:</strong> Resize → Normalize → Batch</li>
+          <li><strong>Model:</strong> Custom CNN (local .h5)</li>
+          <li><strong>Confidence:</strong> Softmax / Sigmoid output</li>
+          <li><strong>Safety:</strong> Local inference, no cloud upload</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <!-- JS -->
+  <script>
+    (function(){
+      const choose = document.getElementById('choose');
+      const fileInput = document.getElementById('fileInput');
+      const previewBox = document.getElementById('previewBox');
+      const emptyText = document.getElementById('emptyText');
+      const fileName = document.getElementById('fileName');
+      const predictBtn = document.getElementById('predict');
+      const clearBtn = document.getElementById('clear');
+      const resultCard = document.getElementById('resultCard');
+      const resultBadge = document.getElementById('resultBadge');
+      const resultLabel = document.getElementById('resultLabel');
+      const resultExplain = document.getElementById('resultExplain');
+      const probBar = document.getElementById('probBar');
+      const probNum = document.getElementById('probNum');
+      const raw = document.getElementById('raw');
+      const healthText = document.getElementById('healthText');
+      const historyEl = document.getElementById('history');
+      const sessionCount = document.getElementById('sessionCount');
+      const scanOverlay = document.getElementById('scanOverlay');
+      const confettiLayer = document.getElementById('confetti');
+
+      let lastFile = null;
+      let history = [];
+
+      // Check model health
+      async function checkHealth(){
+        try{
+          const r = await fetch('/_health');
+          const j = await r.json();
+          healthText.innerHTML = 'Model: <strong>' + (j.model_loaded ? 'Loaded' : 'Not loaded') + '</strong>';
+        }catch(e){
+          healthText.innerHTML = 'Model: <strong>Unavailable</strong>';
+        }
+      }
+      checkHealth();
+
+      function showPreview(file){
+        lastFile = file;
+        if(!file){
+          previewBox.querySelectorAll('img').forEach(i=>i.remove());
+          emptyText.style.display='block';
+          fileName.textContent = 'No file';
+          return;
+        }
+        emptyText.style.display='none';
+        fileName.textContent = file.name;
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.onload = ()=> URL.revokeObjectURL(img.src);
+        // remove previous and add
+        previewBox.querySelectorAll('img').forEach(i=>i.remove());
+        previewBox.insertBefore(img, scanOverlay);
+      }
+
+      fileInput.addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if(f) showPreview(f);
+      });
+
+      choose.addEventListener('click', ()=> fileInput.click());
+
+      clearBtn.addEventListener('click', ()=>{
+        fileInput.value = '';
+        showPreview(null);
+        resultCard.style.display = 'none';
+        raw.textContent = 'Cleared';
+      });
+
+      // confetti util
+      function launchConfetti(color1 = '#FF5A5F', color2 = '#FFD166'){
+        // small confetti using DOM
+        confettiLayer.innerHTML = '';
+        const count = 24;
+        for(let i=0;i<count;i++){
+          const el = document.createElement('div');
+          el.style.position = 'absolute';
+          el.style.left = Math.random()*100 + '%';
+          el.style.top = Math.random()*20 + '%';
+          el.style.width = (6 + Math.random()*8) + 'px';
+          el.style.height = (8 + Math.random()*10) + 'px';
+          el.style.background = (Math.random()<0.5?color1:color2);
+          el.style.opacity = 0.95;
+          el.style.transform = 'rotate('+ (Math.random()*360) +'deg)';
+          el.style.borderRadius = '2px';
+          el.style.pointerEvents='none';
+          el.style.transition = 'transform 1.6s cubic-bezier(.2,.8,.2,1), top 1.6s ease, opacity 1.6s linear';
+          confettiLayer.appendChild(el);
+          // trigger fall
+          requestAnimationFrame(()=> {
+            el.style.top = (40 + Math.random()*60) + '%';
+            el.style.transform = 'translateY(120px) rotate(' + (Math.random()*720) + 'deg)';
+            el.style.opacity = '0';
+          });
+          // cleanup
+          setTimeout(()=> el.remove(), 2000);
+        }
+      }
+
+      async function runPrediction(){
+        if(!lastFile) return alert('Choose an image first');
+        predictBtn.disabled = true;
+        predictBtn.textContent = 'Scanning...';
+        scanOverlay.style.display = 'block';
+        raw.textContent = 'Sending to /predict...';
+
+        try{
+          const fd = new FormData();
+          fd.append('file', lastFile);
+
+          const resp = await fetch('/predict', { method: 'POST', body: fd });
+          const text = await resp.text();
+          let data;
+          try{ data = JSON.parse(text); } catch(e){ data = { raw: text }; }
+
+          raw.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+
+          if(!resp.ok){
+            resultCard.style.display = 'block';
+            resultBadge.textContent = 'Error';
+            resultBadge.style.background = 'rgba(255,255,255,0.03)';
+            resultLabel.textContent = 'Server error';
+            resultExplain.textContent = data.detail || 'Prediction failed';
+            probBar.style.width = '0%';
+            probNum.textContent = '—';
+            return;
+          }
+
+          // expected: { prediction: "tumor"/"normal", probability: 0.92 }
+          const label = (data.prediction || data.label || '').toString();
+          let prob = parseFloat(data.probability);
+          if(Number.isNaN(prob)) prob = 0;
+
+          const isTumor = label.toLowerCase().includes('tumor') || label.toLowerCase().includes('yes') || label === '1';
+
+          resultCard.style.display = 'block';
+          resultBadge.textContent = isTumor ? 'Tumor' : 'Normal';
+          resultBadge.style.background = isTumor ? 'linear-gradient(90deg,#ff7b7b,#ff4d4d)' : 'linear-gradient(90deg,#67f1a6,#00b26a)';
+          resultLabel.textContent = (isTumor ? 'Tumor detected' : 'No tumor detected');
+          resultExplain.textContent = `Model confidence: ${(prob*100).toFixed(2)}%`;
+
+          // animate bar
+          probBar.style.width = (prob*100) + '%';
+          probNum.textContent = Math.round(prob*100) + '%';
+
+          // small pulse for high confidence
+          if(prob > 0.85) {
+            resultCard.classList.add('pulse');
+            setTimeout(()=> resultCard.classList.remove('pulse'), 1600);
+          }
+
+          // confetti on tumor (celebration or alert — you asked for animation)
+          if(isTumor) {
+            launchConfetti('#ff7b7b','#ffb4b4');
+          } else {
+            // subtle glow
+            resultCard.style.boxShadow = '0 10px 30px rgba(16,185,129,0.06)';
+            setTimeout(()=> resultCard.style.boxShadow = '', 1400);
+          }
+
+          // push to history
+          const url = URL.createObjectURL(lastFile);
+          history.unshift({url, label: isTumor ? 'Tumor' : 'Normal', prob});
+          if(history.length > 12) history.pop();
+          renderHistory();
+          sessionCount.textContent = `${history.length} predictions`;
+
+        }catch(err){
+          raw.textContent = err && err.message ? err.message : String(err);
+        }finally{
+          predictBtn.disabled = false;
+          predictBtn.textContent = 'Predict';
+          scanOverlay.style.display = 'none';
+        }
+      }
+
+      function renderHistory(){
+        historyEl.innerHTML = '';
+        history.forEach(h=>{
+          const node = document.createElement('div');
+          node.className = 'h-item';
+          node.innerHTML = `<div class="h-thumb"><img src="${h.url}" /></div>
+            <div class="h-info"><div class="h-label">${h.label}</div><div class="h-sub">${(h.prob*100).toFixed(1)}%</div></div>`;
+          node.addEventListener('click', ()=> {
+            // open in preview
+            fetch(h.url).then(r=>r.blob()).then(b=>{
+              const f = new File([b], 'history.jpg', {type: b.type});
+              lastFile = f;
+              showFilePreview(f);
+            });
+          });
+          historyEl.appendChild(node);
+        });
+      }
+
+      function showFilePreview(file){
+        fileInput.value = '';
+        lastFile = file;
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.onload = ()=> URL.revokeObjectURL(img.src);
+        // remove previous images
+        previewBox.querySelectorAll('img').forEach(n=>n.remove());
+        previewBox.insertBefore(img, scanOverlay);
+        emptyText.style.display = 'none';
+        fileName.textContent = file.name;
+      }
+
+      // wire UI
+      predictBtn.addEventListener('click', runPrediction);
+      fileInput.addEventListener('change', (e)=> {
+        const f = e.target.files && e.target.files[0];
+        if(f) showFilePreview(f);
+      });
+
+      function showFilePreview(f){
+        lastFile = f;
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(f);
+        img.onload = ()=> URL.revokeObjectURL(img.src);
+        previewBox.querySelectorAll('img').forEach(n=>n.remove());
+        previewBox.insertBefore(img, scanOverlay);
+        emptyText.style.display = 'none';
+        fileName.textContent = f.name;
+      }
+
+      // keyboard support: Enter triggers predict
+      document.addEventListener('keydown', (e)=> {
+        if(e.key === 'Enter' && lastFile) runPrediction();
+      });
+
+    })();
+  </script>
+</body>
+</html>

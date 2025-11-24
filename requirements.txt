@@ -1,0 +1,15 @@
+tensorflow
+matplotlib
+scipy
+numpy
+opencv-python
+ultralytics
+labelImg
+scikit-learn
+fastapi
+uvicorn
+jinja2
+pillow
+numpy
+joblib
+python-multipart

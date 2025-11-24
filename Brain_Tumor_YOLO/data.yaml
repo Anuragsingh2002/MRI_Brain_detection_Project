@@ -1,0 +1,6 @@
+
+train: D:\Brain Tumor Classification (MRI)\Brain_Tumor_YOLO\images\train
+val: D:\Brain Tumor Classification (MRI)\Brain_Tumor_YOLO\images\val
+
+nc: 1
+names: ['tumor']
